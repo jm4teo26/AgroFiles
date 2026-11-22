@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Generar usuario — Portafolios Agrícolas</title>
+  <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+  <!-- Herramienta para crear la línea de un usuario nuevo para config.js.
+       Todo se calcula en tu dispositivo; la contraseña no se envía a ningún lado. -->
+  <div class="entrar">
+    <form class="tarjeta" id="f" style="max-width:560px">
+      <h1>Generar usuario</h1>
+      <p class="ayuda">Crea la línea que se pega en <code>config.js</code>. La contraseña no se guarda ni se envía a ningún lado.</p>
+      <label>Usuario (sin espacios, para entrar)<input name="u" required pattern="[a-zA-Z0-9._-]+" autocapitalize="none"></label>
+      <label>Nombre para mostrar<input name="n" required></label>
+      <label>Contraseña (mínimo 8 caracteres)<input name="p" type="password" minlength="8" required autocomplete="new-password"></label>
+      <label>Repite la contraseña<input name="p2" type="password" minlength="8" required autocomplete="new-password"></label>
+      <label class="check" style="justify-content:flex-start"><input type="checkbox" name="mismaSal"> Es un cambio de contraseña de un usuario que ya existe (usar su sal)</label>
+      <label id="campoSal" style="display:none">Sal actual del usuario (cópiala de config.js)<input name="sal"></label>
+      <button class="prim grande">Generar</button>
+      <div id="r"></div>
+    </form>
+  </div>
+  <script src="js/cripto.js"></script>
+  <script>
+    const f = document.getElementById('f');
+    f.mismaSal.onchange = () => { document.getElementById('campoSal').style.display = f.mismaSal.checked ? '' : 'none'; };
+    f.onsubmit = async (e) => {
+      e.preventDefault();
+      const r = document.getElementById('r');
+      if (f.p.value !== f.p2.value) { r.innerHTML = '<p class="error">Las contraseñas no coinciden.</p>'; return; }
+      if (!window.crypto || !crypto.subtle) { r.innerHTML = '<p class="error">Abre esta página desde https:// (GitHub Pages).</p>'; return; }
+      r.innerHTML = '<p>Calculando…</p>';
+      const sal = f.mismaSal.checked && f.sal.value.trim() ? f.sal.value.trim() : Cripto.salAleatoria();
+      const ver = await Cripto.calcularVerificador(f.p.value, sal);
+      const linea = `  { usuario: '${f.u.value.trim().toLowerCase()}', nombre: '${f.n.value.trim().replace(/'/g, "\\'")}', sal: '${sal}', verificador: '${ver}' },`;
+      r.innerHTML = `<p>Copia esta línea y pégala en <code>config.js</code> dentro de <code>window.USUARIOS = [ … ]</code>:</p>
+        <textarea readonly rows="4" class="codigo" id="t"></textarea>
+        <button type="button" class="sec" id="c">Copiar</button>
+        ${f.mismaSal.checked ? `<p class="ayuda"><b>Importante:</b> si este usuario ya tiene información guardada, mejor cambia la contraseña desde la app (Respaldo → Cambiar contraseña). Si solo reemplazas la línea, la información guardada con la contraseña anterior ya no se podrá abrir.</p>` : ''}`;
+      document.getElementById('t').value = linea;
+      document.getElementById('c').onclick = () => navigator.clipboard.writeText(linea);
+      f.p.value = f.p2.value = '';
+    };
+  </script>
+</body>
+</html>
